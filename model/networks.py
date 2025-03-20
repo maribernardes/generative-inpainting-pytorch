@@ -142,7 +142,8 @@ class FineGenerator(nn.Module):
             ones = ones.cuda()
             mask = mask.cuda()
         # conv branch
-        xnow = torch.cat([x1_inpaint, ones, mask], dim=1)
+        xnow = torch.cat([x1_inpaint.clone(), ones.clone(), mask.clone()], dim=1)
+
         x = self.conv1(xnow)
         x = self.conv2_downsample(x)
         x = self.conv3(x)
@@ -405,11 +406,12 @@ class LocalDis(nn.Module):
         self.device_ids = device_ids
 
         self.dis_conv_module = DisConvModule(self.input_dim, self.cnum)
-        self.linear = nn.Linear(self.cnum*4*8*8, 1)
+        self.linear = nn.Linear(self.cnum*4*8*8, 2)
+        
 
     def forward(self, x):
         x = self.dis_conv_module(x)
-        x = x.view(x.size()[0], -1)
+        x = x.clone().contiguous().view(x.size()[0], -1)
         x = self.linear(x)
 
         return x
@@ -424,11 +426,12 @@ class GlobalDis(nn.Module):
         self.device_ids = device_ids
 
         self.dis_conv_module = DisConvModule(self.input_dim, self.cnum)
-        self.linear = nn.Linear(self.cnum*4*16*16, 1)
+        self.linear = nn.Linear(self.cnum*4*16*16, 2)
+
 
     def forward(self, x):
         x = self.dis_conv_module(x)
-        x = x.view(x.size()[0], -1)
+        x = x.clone().contiguous().view(x.size()[0], -1)
         x = self.linear(x)
 
         return x
@@ -508,15 +511,15 @@ class Conv2dBlock(nn.Module):
 
         # initialize activation
         if activation == 'relu':
-            self.activation = nn.ReLU(inplace=True)
+            self.activation = nn.ReLU(inplace=False)
         elif activation == 'elu':
-            self.activation = nn.ELU(inplace=True)
+            self.activation = nn.ELU(inplace=False)
         elif activation == 'lrelu':
-            self.activation = nn.LeakyReLU(0.2, inplace=True)
+            self.activation = nn.LeakyReLU(0.2, inplace=False)
         elif activation == 'prelu':
             self.activation = nn.PReLU()
         elif activation == 'selu':
-            self.activation = nn.SELU(inplace=True)
+            self.activation = nn.SELU(inplace=False)
         elif activation == 'tanh':
             self.activation = nn.Tanh()
         elif activation == 'none':
